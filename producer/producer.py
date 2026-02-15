@@ -1,7 +1,7 @@
 import json
 import websocket
 from confluent_kafka import Producer
-from datetime import datetime
+from datetime import datetime, timezone
 
 producer = Producer({
     'bootstrap.servers': 'localhost:9092'
@@ -17,7 +17,7 @@ def on_message(ws, message):
         'symbol': data['s'],
         'price': float(data['p']),
         'quantity': float(data['q']),
-        'timestamp': datetime.now(datetime.UTC).isoformat(),
+        'timestamp': datetime.now(timezone.utc).isoformat(),
         'trade_time': data['T']
     }
     
