@@ -5,3 +5,10 @@ __pycache__/
 .terraform/
 *.tfstate
 *.tfstate.backup
+airflow/logs/
+airflow/*.db
+airflow/*.pid
+dbt/crypto_transformations/target/
+dbt/crypto_transformations/dbt_packages/
+dbt/crypto_transformations/logs/
+test.json

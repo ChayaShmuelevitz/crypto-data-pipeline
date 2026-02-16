@@ -1,0 +1,8 @@
+version: 2
+
+sources:
+  - name: crypto
+    database: AwsDataCatalog
+    schema: crypto_db
+    tables:
+      - name: raw_trades

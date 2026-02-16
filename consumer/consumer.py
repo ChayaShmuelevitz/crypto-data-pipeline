@@ -1,7 +1,7 @@
 import json
 import boto3
 from confluent_kafka import Consumer
-from datetime import datetime
+from datetime import datetime, timezone
 
 # חיבור ל-AWS S3
 s3_client = boto3.client('s3', region_name='eu-west-1')
@@ -25,15 +25,18 @@ BATCH_SIZE = 100  # נשמור כל 100 הודעות
 
 def save_to_s3(batch):
     """
-    שומר batch של הודעות ל-S3 כקובץ JSON
+    שומר batch של הודעות ל-S3 בפורמט newline-delimited JSON
     """
-    timestamp = datetime.utcnow().strftime('%Y/%m/%d/%H-%M-%S')
+    timestamp = datetime.now(timezone.utc).strftime('%Y/%m/%d/%H-%M-%S')
     file_key = f"crypto-trades/{timestamp}.json"
+    
+    # שמור כל JSON בשורה נפרדת (לא מערך!)
+    data = '\n'.join([json.dumps(record) for record in batch])
     
     s3_client.put_object(
         Bucket=BRONZE_BUCKET,
         Key=file_key,
-        Body=json.dumps(batch).encode('utf-8'),
+        Body=data.encode('utf-8'),
         ContentType='application/json'
     )
     
