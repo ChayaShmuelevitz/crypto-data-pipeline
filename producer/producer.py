@@ -4,7 +4,7 @@ from confluent_kafka import Producer
 from datetime import datetime, timezone
 
 producer = Producer({
-    'bootstrap.servers': 'localhost:9092'
+    'bootstrap.servers': 'kafka:9092'
 })
 
 def on_message(ws, message):
