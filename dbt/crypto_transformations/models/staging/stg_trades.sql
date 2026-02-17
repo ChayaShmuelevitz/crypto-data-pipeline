@@ -1,15 +1,11 @@
-{{ config(
-    materialized='view',
-    database='AwsDataCatalog'
-) }}
+{{ config(materialized='view') }}
 
 SELECT 
     symbol,
     price,
     quantity,
-    CAST(from_iso8601_timestamp(timestamp) AS timestamp) as trade_timestamp,
+    timestamp,
     trade_time,
-    price * quantity as trade_value
+    processing_time,
+    CAST(price * quantity AS DOUBLE) as trade_value
 FROM {{ source('crypto', 'raw_trades') }}
-WHERE price > 0
-  AND quantity > 0

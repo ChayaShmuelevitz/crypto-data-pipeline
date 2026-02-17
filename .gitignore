@@ -12,3 +12,44 @@ dbt/crypto_transformations/target/
 dbt/crypto_transformations/dbt_packages/
 dbt/crypto_transformations/logs/
 test.json
+airflow/variables.json
+
+notepad C:\projects\data-pipeline\.gitignore
+```
+```
+# AWS credentials
+.aws/
+*.pem
+airflow/variables.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# dbt
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+
+# Docker
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+airflow/logs/
+
+# OS
+.DS_Store
+Thumbs.db

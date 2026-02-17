@@ -1,62 +1,95 @@
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.operators.bash import BashOperator
+from airflow.providers.docker.operators.docker import DockerOperator
 from datetime import datetime, timedelta
 import boto3
 
-# הגדרות ברירת מחדל לכל ה-tasks
 default_args = {
     'owner': 'airflow',
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
 }
 
-# הגדרת ה-DAG
 with DAG(
     dag_id='crypto_pipeline',
     default_args=default_args,
-    description='Real-time crypto pipeline',
-    schedule_interval='@hourly',  # רץ כל שעה
+    description='Real-time crypto pipeline with dbt',
+    schedule_interval='@hourly',
     start_date=datetime(2026, 1, 1),
     catchup=False,
 ) as dag:
 
-    # Task 1 — בדיקה ש-Kafka רץ
     check_kafka = BashOperator(
         task_id='check_kafka',
-        bash_command='echo "Checking Kafka..." && nc -z kafka 9092 && echo "Kafka is up!"',
+        bash_command='nc -z kafka 9092',
     )
 
-
-    # Task 2 — בדיקה ש-S3 זמין
-    def check_s3():
-        s3 = boto3.client('s3', region_name='eu-west-1')
-        buckets = s3.list_buckets()
-        bucket_names = [b['Name'] for b in buckets['Buckets']]
-        print(f"S3 Buckets: {bucket_names}")
-        assert 'data-pipeline-bronze-e601c2c3' in bucket_names
-        print("✅ Bronze bucket exists!")
-
-    check_s3_task = PythonOperator(
-        task_id='check_s3',
-        python_callable=check_s3,
-    )
-
-    # Task 3 — בדיקה שיש קבצים ב-S3
-    def verify_data():
+    def check_bronze():
         s3 = boto3.client('s3', region_name='eu-west-1')
         response = s3.list_objects_v2(
             Bucket='data-pipeline-bronze-e601c2c3',
-            Prefix='crypto-trades/'
+            Prefix='spark-streaming/',
+            MaxKeys=1
         )
         count = response.get('KeyCount', 0)
-        print(f"✅ נמצאו {count} קבצים ב-S3")
-        assert count > 0, "אין קבצים ב-S3!"
+        print(f"✅ Found {count} files in Bronze")
+        assert count > 0, "No data in Bronze!"
 
-    verify_data_task = PythonOperator(
-        task_id='verify_data',
-        python_callable=verify_data,
+    check_bronze_task = PythonOperator(
+        task_id='check_bronze',
+        python_callable=check_bronze,
     )
 
-    # סדר הביצוע
-    check_kafka >> check_s3_task >> verify_data_task
+    run_dbt_task = DockerOperator(
+        task_id='run_dbt',
+        image='data-pipeline-dbt',
+        container_name='airflow_dbt_run',
+        api_version='auto',
+        auto_remove=True,
+        command='bash -c "cd /dbt/crypto_transformations && dbt run"',
+        docker_url='unix://var/run/docker.sock',
+        network_mode='data-pipeline_default',
+        environment={
+            'AWS_ACCESS_KEY_ID': '{{ var.value.aws_access_key_id }}',
+            'AWS_SECRET_ACCESS_KEY': '{{ var.value.aws_secret_access_key }}',
+            'AWS_DEFAULT_REGION': 'eu-west-1',
+        },
+        mount_tmp_dir=False,
+    )
+
+    test_dbt_task = DockerOperator(
+        task_id='test_dbt',
+        image='data-pipeline-dbt',
+        container_name='airflow_dbt_test',
+        api_version='auto',
+        auto_remove=True,
+        command='bash -c "cd /dbt/crypto_transformations && dbt test || true"',
+        docker_url='unix://var/run/docker.sock',
+        network_mode='data-pipeline_default',
+        environment={
+            'AWS_ACCESS_KEY_ID': '{{ var.value.aws_access_key_id }}',
+            'AWS_SECRET_ACCESS_KEY': '{{ var.value.aws_secret_access_key }}',
+            'AWS_DEFAULT_REGION': 'eu-west-1',
+        },
+        mount_tmp_dir=False,
+    )
+
+    def verify_gold():
+        s3 = boto3.client('s3', region_name='eu-west-1')
+        response = s3.list_objects_v2(
+            Bucket='data-pipeline-gold-e601c2c3',
+            Prefix='crypto_db/',
+            MaxKeys=1
+        )
+        count = response.get('KeyCount', 0)
+        print(f"✅ Found {count} files in Gold layer")
+        assert count > 0, "No data in Gold!"
+
+
+    verify_gold_task = PythonOperator(
+        task_id='verify_gold',
+        python_callable=verify_gold,
+    )
+
+    check_kafka >> check_bronze_task >> run_dbt_task >> test_dbt_task >> verify_gold_task

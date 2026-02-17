@@ -8,6 +8,10 @@ RUN apt-get update \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
+RUN mkdir -p /root/.dbt
+
+COPY profiles.yml /root/.dbt/profiles.yml
+
 COPY . /dbt
 
 CMD ["bash"]

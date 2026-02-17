@@ -1,0 +1,15 @@
+crypto_transformations:
+  target: dev
+  outputs:
+    dev:
+      type: athena
+      s3_staging_dir: s3://data-pipeline-bronze-e601c2c3/dbt-staging/
+      s3_data_dir: s3://data-pipeline-gold-e601c2c3/
+      region_name: eu-west-1
+      database: AwsDataCatalog
+      schema: crypto_db
+      threads: 4
+      quoting:
+        database: true
+        schema: true
+        identifier: true

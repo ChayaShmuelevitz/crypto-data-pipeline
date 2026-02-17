@@ -18,13 +18,10 @@ services:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-
-
 
   kafka-ui:
     image: obsidiandynamics/kafdrop:latest
@@ -37,19 +34,19 @@ services:
       KAFKA_BROKERCONNECT: kafka:9092
 
   postgres:
-    image: postgres:13
+    image: postgres:15
     container_name: postgres
     environment:
       POSTGRES_USER: airflow
       POSTGRES_PASSWORD: airflow
       POSTGRES_DB: airflow
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "airflow"]
+      test: ["CMD-SHELL", "pg_isready -U airflow"]
       interval: 5s
       retries: 5
 
   airflow:
-    image: apache/airflow:2.8.0
+    build: ./airflow
     container_name: airflow
     depends_on:
       postgres:
@@ -67,9 +64,9 @@ services:
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
-      - ./airflow/requirements.txt:/requirements.txt
-    command: bash -c "pip install -r /requirements.txt && airflow db init && airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com ; airflow webserver & airflow scheduler"
-
+      - ./airflow/variables.json:/opt/airflow/variables.json
+      - //var/run/docker.sock:/var/run/docker.sock
+    command: bash -c "airflow db init && airflow variables import /opt/airflow/variables.json && airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com ; airflow webserver & airflow scheduler"
   dbt:
     build: ./dbt
     container_name: dbt
@@ -81,6 +78,7 @@ services:
       - ./dbt:/dbt
       - C:\Users\USER\.aws:/root/.aws:ro
     command: tail -f /dev/null
+
   spark:
     build: ./spark
     container_name: spark
@@ -92,7 +90,9 @@ services:
       AWS_DEFAULT_REGION: eu-west-1
     volumes:
       - ./spark:/app
-    command: tail -f /dev/null
+      - spark_ivy_cache:/root/.ivy2
+    command: python3 /app/streaming_consumer.py
+
   producer:
     build: ./producer
     container_name: producer
@@ -100,3 +100,6 @@ services:
       - kafka
     volumes:
       - ./producer:/app
+
+volumes:
+  spark_ivy_cache:

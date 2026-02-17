@@ -1,0 +1,43 @@
+version: 2
+
+models:
+  - name: agg_trades_hourly
+    description: "Hourly aggregated trading statistics per symbol"
+    columns:
+      - name: symbol
+        description: "Cryptocurrency symbol (BTCUSDT, ETHUSDT, SOLUSDT)"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT']
+      
+      - name: hour
+        description: "Hour timestamp (truncated)"
+        tests:
+          - not_null
+          - unique
+      
+      - name: avg_price
+        description: "Average price during the hour"
+        tests:
+          - not_null
+      
+      - name: min_price
+        description: "Minimum price during the hour"
+        tests:
+          - not_null
+      
+      - name: max_price
+        description: "Maximum price during the hour"
+        tests:
+          - not_null
+      
+      - name: total_value
+        description: "Total trade value (price * quantity)"
+        tests:
+          - not_null
+      
+      - name: trade_count
+        description: "Number of trades in the hour"
+        tests:
+          - not_null
