@@ -12,21 +12,21 @@ End-to-end real-time data pipeline processing cryptocurrency trades from Binance
 
 Binance API → Kafka → Spark Streaming → S3 Bronze (Parquet)
 
-&nbsp;                                           ↓
+                                           ↓
 
-&nbsp;                                      Athena queries
+                                      Athena queries
 
-&nbsp;                                           ↓
+                                           ↓
 
-&nbsp;                                   dbt transformations
+                                   dbt transformations
 
-&nbsp;                                           ↓
+                                           ↓
 
-&nbsp;                                 S3 Gold (Parquet tables)
+                                 S3 Gold (Parquet tables)
 
-&nbsp;                                           ↓
+                                           ↓
 
-&nbsp;                                   Airflow orchestration
+                                   Airflow orchestration
 
 ```
 
